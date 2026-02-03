@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Tasks - Login</title>
+    <style>
+        :root {
+            --bg-dark: #1f1f1f;
+            --bg-sidebar: #181818;
+            --bg-item: #2d2d2d;
+            --bg-item-hover: #363636;
+            --accent: #7b68ee; /* Medium Slate Blue */
+            --text-main: #ffffff;
+            --text-muted: #a0a0a0;
+            --danger: #e74c3c;
+            --menu-bg: #2b2b2b;
+            --border-color: #333;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        
+        body {
+            height: 100vh;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            overflow: hidden;
+        }
+
+        /* --- AUTH SCREEN STYLES --- */
+        #authContainer {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: var(--bg-dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .auth-box {
+            background-color: var(--bg-item);
+            padding: 40px;
+            border-radius: 8px;
+            width: 350px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            display: none; /* Controlled by JS */
+        }
+
+        .auth-title { font-size: 1.5rem; margin-bottom: 10px; color: var(--text-main); }
+        .auth-subtitle { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 25px; }
+        
+        .auth-input {
+            width: 100%; padding: 12px; margin-bottom: 15px;
+            background-color: var(--bg-dark); border: 1px solid var(--border-color);
+            color: white; border-radius: 4px; outline: none;
+        }
+        
+        .auth-input:focus { border-color: var(--accent); }
+        .auth-input.pin-mode { letter-spacing: 5px; font-weight: bold; text-align: center; }
+
+        .auth-btn {
+            width: 100%; padding: 12px; background-color: var(--accent);
+            color: white; border: none; border-radius: 4px; cursor: pointer;
+            font-weight: 600; transition: 0.2s; margin-top: 10px;
+        }
+        .auth-btn:hover { background-color: #6a5acd; }
+        
+        .link-text { margin-top: 20px; font-size: 0.85rem; color: var(--text-muted); cursor: pointer; text-decoration: underline; }
+        .link-text:hover { color: white; }
+
+        .error-msg { color: var(--danger); font-size: 0.85rem; margin-bottom: 15px; display: none; }
+
+        /* --- APP CONTAINER --- */
+        #appContainer { display: none; display: flex; height: 100%; width: 100%; }
+
+        /* SIDEBAR STYLES */
+        aside {
+            width: 280px; background-color: var(--bg-sidebar); display: flex;
+            flex-direction: column; border-right: 1px solid var(--border-color); user-select: none;
+        }
+
+        .user-profile { padding: 20px; display: flex; align-items: center; gap: 12px; cursor: pointer; position: relative; }
+        .user-profile:hover { background-color: var(--bg-item); }
+
+        .user-avatar {
+            width: 40px; height: 40px; border-radius: 50%; background-color: var(--accent);
+            display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1rem;
+        }
+
+        .lists-container { flex: 1; overflow-y: auto; padding: 10px 0; }
+        .list-item { padding: 12px 20px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: 0.2s; }
+        .list-item:hover { background-color: var(--bg-item); }
+        .list-item.active { background-color: var(--bg-item); border-left: 3px solid var(--accent); }
+        
+        .add-list-btn {
+            padding: 15px; cursor: pointer; color: var(--accent);
+            border-top: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px;
+        }
+        .add-list-btn:hover { background-color: var(--bg-item); }
+
+        /* MENUS */
+        .popup-menu {
+            display: none; position: absolute; background-color: var(--menu-bg);
+            border: 1px solid #444; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            width: 220px; z-index: 1000; padding: 5px 0;
+        }
+        .menu-item { padding: 10px 15px; font-size: 0.9rem; color: var(--text-main); cursor: pointer; display: flex; align-items: center; gap: 10px; }
+        .menu-item:hover { background-color: var(--bg-item-hover); }
+        .menu-item.delete { color: var(--danger); }
+        .menu-separator { height: 1px; background-color: #444; margin: 5px 0; }
+        .menu-icon { width: 16px; text-align: center; }
+
+        /* MAIN CONTENT */
+        main { flex: 1; display: flex; flex-direction: column; padding: 40px; }
+        header { margin-bottom: 30px; }
+        h1 { font-size: 2rem; color: var(--accent); margin-bottom: 5px; }
+        .date-display { color: var(--text-muted); font-size: 0.9rem; }
+
+        .task-input-container {
+            background-color: var(--bg-item); border-radius: 8px; padding: 15px;
+            display: flex; align-items: center; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .add-btn-icon { color: var(--accent); font-size: 1.5rem; cursor: pointer; padding-right: 10px; user-select: none; }
+        .add-btn-icon:hover { color: #9d8cff; }
+        .task-input-container input { flex: 1; background: transparent; border: none; color: white; font-size: 1rem; outline: none; }
+
+        .tasks-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        .task-item { background-color: var(--bg-item); padding: 15px; border-radius: 6px; display: flex; align-items: flex-start; gap: 12px; transition: 0.2s; position: relative; }
+        .task-item:hover { background-color: var(--bg-item-hover); }
+
+        .checkbox { width: 22px; height: 22px; border: 2px solid var(--text-muted); border-radius: 50%; cursor: pointer; flex-shrink: 0; margin-top: 2px; display: flex; align-items: center; justify-content: center; }
+        .task-item.completed .checkbox { background-color: var(--accent); border-color: var(--accent); }
+        .task-item.completed .checkbox::after { content: '✓'; color: white; font-size: 14px; }
+
+        .task-content { flex: 1; }
+        .task-text { font-size: 1rem; margin-bottom: 4px; }
+        .task-item.completed .task-text { text-decoration: line-through; color: var(--text-muted); }
+        .task-meta { font-size: 0.75rem; color: var(--text-muted); display: flex; gap: 15px; }
+        .delete-btn { color: var(--text-muted); cursor: pointer; padding: 5px; }
+        .delete-btn:hover { color: var(--danger); }
+        .list-name-input { background: #000; color: white; border: 1px solid var(--accent); padding: 4px; width: 100%; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-sidebar); }
+        ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+    </style>
+</head>
+<body onclick="hideAllMenus()">
+
+    <div id="authContainer">
+        
+        <div id="loginScreen" class="auth-box">
+            <h2 class="auth-title">Welcome Back</h2>
+            <p class="auth-subtitle">Login to access your tasks</p>
+            
+            <input type="text" id="loginName" class="auth-input" placeholder="Username" />
+            <input type="password" id="loginPin" class="auth-input pin-mode" placeholder="PIN" maxlength="4" />
+            
+            <div id="loginError" class="error-msg">Incorrect Username or PIN.</div>
+            
+            <button class="auth-btn" onclick="performLogin()">Log In</button>
+            <div class="link-text" onclick="showRegistration()">Create New Account</div>
+        </div>
+
+        <div id="registerScreen" class="auth-box">
+            <h2 class="auth-title">New Account</h2>
+            <p class="auth-subtitle">Create a secure profile</p>
+            
+            <input type="text" id="regName" class="auth-input" placeholder="Choose Username" />
+            <input type="password" id="regPin" class="auth-input pin-mode" placeholder="Create 4-Digit PIN" maxlength="4" />
+            
+            <div id="regError" class="error-msg">Username required. PIN must be 4 digits.</div>
+            
+            <button class="auth-btn" onclick="registerUser()">Sign Up</button>
+            <div class="link-text" onclick="showLogin()">Back to Login</div>
+        </div>
+
+    </div>
+
+    <div id="appContainer">
+        <aside oncontextmenu="return false;">
+            <div class="user-profile" onclick="toggleProfileMenu(event)">
+                <div class="user-avatar" id="avatarDisplay">U</div>
+                <div>
+                    <div style="font-weight: 600;" id="nameDisplay">User</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">Online</div>
+                </div>
+            </div>
+
+            <div id="profileMenu" class="popup-menu" style="top: 70px; left: 10px;">
+                <div class="menu-item" onclick="performLogout()">
+                    <span class="menu-icon">➜</span> Log Out
+                </div>
+                <div class="menu-separator"></div>
+                <div class="menu-item delete" onclick="deleteAccount()">
+                    <span class="menu-icon">🗑</span> Delete Account
+                </div>
+            </div>
+
+            <div class="lists-container" id="listsContainer"></div>
+            <div class="add-list-btn" onclick="createNewList()"><span>+</span> New List</div>
+        </aside>
+
+        <main>
+            <header>
+                <h1 id="currentListName">My Day</h1>
+                <div class="date-display" id="currentDate"></div>
+            </header>
+            <div class="task-input-container">
+                <span class="add-btn-icon" onclick="addTask()">+</span>
+                <input type="text" id="taskInput" placeholder="Add a task" onkeypress="handleEnter(event)">
+            </div>
+            <div class="tasks-list" id="tasksList"></div>
+        </main>
+    </div>
+
+    <div id="contextMenu" class="popup-menu" onclick="event.stopPropagation()">
+        <div class="menu-item" onclick="menuAction('rename')"><span class="menu-icon">✎</span> Rename</div>
+        <div class="menu-item" onclick="menuAction('duplicate')"><span class="menu-icon">❐</span> Duplicate</div>
+        <div class="menu-item" onclick="menuAction('print')"><span class="menu-icon">🖨</span> Print</div>
+        <div class="menu-separator"></div>
+        <div class="menu-item delete" onclick="menuAction('delete')"><span class="menu-icon">🗑</span> Delete</div>
+    </div>
+
+    <script>
+        // --- MULTI-USER SYSTEM ---
+        const authContainer = document.getElementById('authContainer');
+        const loginScreen = document.getElementById('loginScreen');
+        const registerScreen = document.getElementById('registerScreen');
+        const appContainer = document.getElementById('appContainer');
+
+        // Global State
+        let accounts = JSON.parse(localStorage.getItem('todoApp_accounts')) || [];
+        let currentUser = null; 
+        let currentData = null; 
+
+        // --- INIT ---
+        function init() {
+            showLogin();
+        }
+
+        // --- SCREEN NAVIGATION ---
+        function hideAllAuth() {
+            loginScreen.style.display = 'none';
+            registerScreen.style.display = 'none';
+        }
+
+        function showLogin() {
+            appContainer.style.display = 'none';
+            authContainer.style.display = 'flex';
+            hideAllAuth();
+            loginScreen.style.display = 'block';
+            
+            // Clear inputs
+            document.getElementById('loginName').value = '';
+            document.getElementById('loginPin').value = '';
+            document.getElementById('loginError').style.display = 'none';
+        }
+
+        function showRegistration() {
+            hideAllAuth();
+            registerScreen.style.display = 'block';
+            
+            // Clear inputs
+            document.getElementById('regName').value = '';
+            document.getElementById('regPin').value = '';
+            document.getElementById('regError').style.display = 'none';
+        }
+
+        // --- AUTH ACTIONS ---
+        function registerUser() {
+            const name = document.getElementById('regName').value.trim();
+            const pin = document.getElementById('regPin').value.trim();
+
+            if (!name || pin.length !== 4 || isNaN(pin)) {
+                document.getElementById('regError').innerText = "Username required. PIN must be 4 digits.";
+                document.getElementById('regError').style.display = 'block';
+                return;
+            }
+
+            // Check if username already exists
+            if (accounts.some(u => u.name.toLowerCase() === name.toLowerCase())) {
+                document.getElementById('regError').innerText = "Username already taken.";
+                document.getElementById('regError').style.display = 'block';
+                return;
+            }
+
+            // Create new user (using name as key ID)
+            const newUser = { name, pin };
+            accounts.push(newUser);
+            localStorage.setItem('todoApp_accounts', JSON.stringify(accounts));
+
+            // Initialize empty data for this user
+            const initialData = {
+                lists: [{ id: '1', name: 'My Day', tasks: [] }],
+                activeListId: '1'
+            };
+            // Key based on name now
+            localStorage.setItem(`todoApp_data_${name}`, JSON.stringify(initialData));
+
+            // Auto login after register
+            login(newUser);
+        }
+
+        function performLogin() {
+            const name = document.getElementById('loginName').value.trim();
+            const pin = document.getElementById('loginPin').value.trim();
+            
+            // Find user by name and pin
+            const user = accounts.find(u => u.name.toLowerCase() === name.toLowerCase() && u.pin === pin);
+
+            if (user) {
+                login(user);
+            } else {
+                document.getElementById('loginError').style.display = 'block';
+                document.getElementById('loginPin').value = '';
+            }
+        }
+
+        function login(user) {
+            currentUser = user;
+            authContainer.style.display = 'none';
+            appContainer.style.display = 'flex';
+
+            // Load specific user data
+            currentData = JSON.parse(localStorage.getItem(`todoApp_data_${user.name}`));
+            if (!currentData) {
+                currentData = { lists: [{ id: '1', name: 'My Day', tasks: [] }], activeListId: '1' };
+            }
+
+            // Update UI
+            document.getElementById('nameDisplay').innerText = user.name;
+            document.getElementById('avatarDisplay').innerText = user.name.charAt(0).toUpperCase();
+
+            render();
+        }
+
+        function performLogout() {
+            currentUser = null;
+            currentData = null;
+            showLogin();
+        }
+
+        function deleteAccount() {
+            if (confirm(`Delete user "${currentUser.name}"? THIS CANNOT BE UNDONE.`)) {
+                const name = currentUser.name;
+                accounts = accounts.filter(u => u.name !== name);
+                localStorage.setItem('todoApp_accounts', JSON.stringify(accounts));
+                localStorage.removeItem(`todoApp_data_${name}`);
+                performLogout();
+            }
+        }
+
+        // Support Enter Keys
+        document.getElementById('loginPin').onkeypress = (e) => { if(e.key === 'Enter') performLogin(); };
+        document.getElementById('regPin').onkeypress = (e) => { if(e.key === 'Enter') registerUser(); };
+
+        // --- TODO LOGIC ---
+        
+        function saveData() {
+            if (currentUser && currentData) {
+                localStorage.setItem(`todoApp_data_${currentUser.name}`, JSON.stringify(currentData));
+                render();
+            }
+        }
+
+        function render() {
+            const listsContainer = document.getElementById('listsContainer');
+            const tasksList = document.getElementById('tasksList');
+            const currentListName = document.getElementById('currentListName');
+            const currentDate = document.getElementById('currentDate');
+
+            listsContainer.innerHTML = '';
+            if (!currentData.lists.some(l => l.id === currentData.activeListId) && currentData.lists.length > 0) {
+                currentData.activeListId = currentData.lists[0].id;
+            }
+
+            currentData.lists.forEach(list => {
+                const isActive = list.id === currentData.activeListId;
+                const div = document.createElement('div');
+                div.className = `list-item ${isActive ? 'active' : ''}`;
+                div.innerHTML = `<div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><span>${list.name}</span></div><span style="font-size:0.8rem;color:#666;">${list.tasks.length}</span>`;
+                div.onclick = (e) => { if(e.target.tagName !== 'INPUT') { currentData.activeListId = list.id; saveData(); } };
+                div.oncontextmenu = (e) => { e.preventDefault(); showContextMenu(e, list.id); };
+                listsContainer.appendChild(div);
+            });
+
+            const activeList = currentData.lists.find(l => l.id === currentData.activeListId);
+            if (!activeList) { currentListName.innerText = "No Lists"; tasksList.innerHTML = ''; return; }
+
+            currentListName.innerText = activeList.name;
+            currentDate.innerText = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+            tasksList.innerHTML = '';
+            [...activeList.tasks].sort((a, b) => a.completed - b.completed).forEach(task => {
+                const taskDiv = document.createElement('div');
+                taskDiv.className = `task-item ${task.completed ? 'completed' : ''}`;
+                const createdDate = new Date(task.createdAt).toLocaleString();
+                const completedDate = task.completedAt ? new Date(task.completedAt).toLocaleString() : null;
+                taskDiv.innerHTML = `
+                    <div class="checkbox" onclick="toggleTask('${task.id}')"></div>
+                    <div class="task-content">
+                        <div class="task-text">${task.text}</div>
+                        <div class="task-meta"><span>Created: ${createdDate}</span>${task.completed ? `<span style="color:var(--accent)">Completed: ${completedDate}</span>` : ''}</div>
+                    </div>
+                    <div class="delete-btn" onclick="deleteTask('${task.id}')">✕</div>`;
+                tasksList.appendChild(taskDiv);
+            });
+        }
+
+        // --- TASK OPERATIONS ---
+        function handleEnter(e) { if (e.key === 'Enter') addTask(); }
+
+        function addTask() {
+            const input = document.getElementById('taskInput');
+            const text = input.value.trim();
+            if (!text || !currentData.activeListId) return;
+            const activeList = currentData.lists.find(l => l.id === currentData.activeListId);
+            activeList.tasks.unshift({ id: Date.now().toString(), text, completed: false, createdAt: new Date().toISOString(), completedAt: null });
+            input.value = ''; saveData();
+        }
+
+        function toggleTask(taskId) {
+            const activeList = currentData.lists.find(l => l.id === currentData.activeListId);
+            const task = activeList.tasks.find(t => t.id === taskId);
+            task.completed = !task.completed; task.completedAt = task.completed ? new Date().toISOString() : null;
+            saveData();
+        }
+
+        function deleteTask(taskId) {
+            const activeList = currentData.lists.find(l => l.id === currentData.activeListId);
+            activeList.tasks = activeList.tasks.filter(t => t.id !== taskId);
+            saveData();
+        }
+
+        function createNewList() {
+            const name = prompt("Enter new list name:", "Untitled List");
+            if (name) {
+                const newList = { id: Date.now().toString(), name, tasks: [] };
+                currentData.lists.push(newList); currentData.activeListId = newList.id; saveData();
+            }
+        }
+
+        // --- MENUS ---
+        let contextTargetId = null;
+        function showContextMenu(e, listId) {
+            hideAllMenus();
+            contextTargetId = listId;
+            const menu = document.getElementById('contextMenu');
+            menu.style.display = 'block'; menu.style.left = `${e.clientX}px`; menu.style.top = `${e.clientY}px`;
+        }
+        function toggleProfileMenu(e) {
+            e.stopPropagation();
+            const menu = document.getElementById('profileMenu');
+            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+        }
+        function hideAllMenus() {
+            document.getElementById('contextMenu').style.display = 'none';
+            document.getElementById('profileMenu').style.display = 'none';
+        }
+        function menuAction(action) {
+            hideAllMenus();
+            const listIndex = currentData.lists.findIndex(l => l.id === contextTargetId);
+            const list = currentData.lists[listIndex];
+            if (!list) return;
+
+            if (action === 'rename') {
+                 const newName = prompt("Rename list:", list.name);
+                 if(newName) { currentData.lists[listIndex].name = newName; saveData(); }
+            }
+            else if (action === 'duplicate') {
+                currentData.lists.splice(listIndex + 1, 0, { ...list, id: Date.now().toString(), name: list.name + " Copy", tasks: [...list.tasks] });
+                saveData();
+            } else if (action === 'print') {
+                currentData.activeListId = contextTargetId; saveData(); setTimeout(() => window.print(), 100);
+            } else if (action === 'delete') {
+                if(confirm(`Delete "${list.name}"?`)) {
+                    currentData.lists = currentData.lists.filter(l => l.id !== contextTargetId);
+                    if (currentData.activeListId === contextTargetId) currentData.activeListId = currentData.lists[0]?.id;
+                    saveData();
+                }
+            }
+        }
+
+        // Start
+        init();
+
+    </script>
+</body>
+</html>
