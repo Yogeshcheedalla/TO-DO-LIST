@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Tasks - Login</title>
+    <title>My Tasks</title>
     <style>
         :root {
             --bg-dark: #1f1f1f;
@@ -240,7 +240,23 @@
 
         // --- INIT ---
         function init() {
-            showLogin();
+            // Check if a session exists
+            const savedSessionUser = localStorage.getItem('todoApp_session');
+            
+            if (savedSessionUser) {
+                // Verify user still exists in accounts
+                const user = accounts.find(u => u.name === savedSessionUser);
+                if (user) {
+                    // Auto-login
+                    login(user);
+                } else {
+                    // User might have been deleted but session remained
+                    localStorage.removeItem('todoApp_session');
+                    showLogin();
+                }
+            } else {
+                showLogin();
+            }
         }
 
         // --- SCREEN NAVIGATION ---
@@ -299,7 +315,6 @@
                 lists: [{ id: '1', name: 'My Day', tasks: [] }],
                 activeListId: '1'
             };
-            // Key based on name now
             localStorage.setItem(`todoApp_data_${name}`, JSON.stringify(initialData));
 
             // Auto login after register
@@ -323,6 +338,10 @@
 
         function login(user) {
             currentUser = user;
+            
+            // Save Session
+            localStorage.setItem('todoApp_session', user.name);
+
             authContainer.style.display = 'none';
             appContainer.style.display = 'flex';
 
@@ -340,6 +359,8 @@
         }
 
         function performLogout() {
+            // Clear Session
+            localStorage.removeItem('todoApp_session');
             currentUser = null;
             currentData = null;
             showLogin();
